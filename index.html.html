@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lehrbetriebe finden</title>
+<style>
+:root { color-scheme: light; }
+* { box-sizing:border-box; }
+body { margin:0; padding:20px; font-family:Arial,Helvetica,sans-serif; color:#202a35; background:#f1f5f9; }
+.wrap { max-width:1100px; margin:0 auto; background:#ffffff; padding:24px; border-radius:16px; box-shadow:0 8px 28px rgba(20,40,70,.10); }
+h2 { margin:0 0 8px; font-size:1.5rem; }
+.intro { margin:0 0 20px; color:#526171; line-height:1.5; }
+.filters { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; padding:18px; border:1px solid #cbdcf4; border-radius:12px; background:linear-gradient(135deg,#eef5ff,#f4f0ff); }
+label { display:block; font-weight:700; font-size:.95rem; color:#243b63; }
+select { width:100%; margin-top:7px; padding:11px; border:1px solid #a8bddb; border-radius:7px; background:white; font:inherit; color:#1f2937; outline-color:#3867d6; }
+.actions { display:flex; gap:10px; align-items:center; margin-top:14px; flex-wrap:wrap; }
+button { border:0; border-radius:7px; padding:11px 16px; font:inherit; cursor:pointer; }
+.primary { background:#2457c5; color:white; box-shadow:0 3px 8px rgba(36,87,197,.22); } .secondary { background:#e8eafc; color:#343b76; }
+#count { margin:20px 0 10px; font-weight:700; }
+.result { border:1px solid #dce2e8; border-radius:10px; padding:16px; margin:10px 0; }
+.result h3 { margin:0 0 8px; font-size:1.1rem; }
+.result p { margin:5px 0; line-height:1.45; }
+.muted { color:#617080; }
+@media (max-width:650px) { body { padding:10px; } .wrap { padding:16px; } .filters { grid-template-columns:1fr; padding:13px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+<h2>Lehrbetriebe finden</h2>
+<p class="intro">Wählen Sie Ort, Lehrberuf und/oder Fachgruppe aus. Sie können auch nur ein Feld auswählen.</p>
+<div class="filters">
+  <label for="ort">Ort<select id="ort"><option value="">Alle Orte</option>
+<option value="Altmünster">Altmünster</option>
+<option value="Gmunden">Gmunden</option></select></label>
+  <label for="beruf">Lehrberuf<select id="beruf"><option value="">Alle Lehrberufe</option>
+<option value="Elektrotechnik">Elektrotechnik</option>
+<option value="Installations- und Gebäudetechnik">Installations- und Gebäudetechnik</option></select></label>
+  <label for="gruppe">Fachgruppe<select id="gruppe"><option value="">Alle Fachgruppen</option>
+<option value="E">E</option>
+<option value="M">M</option></select></label>
+</div>
+<div class="actions"><button class="primary" id="search" type="button">Suchen</button><button class="secondary" id="reset" type="button">Zurücksetzen</button></div>
+<div id="count" aria-live="polite"></div>
+<div id="results"></div>
+</div>
+<script>
+const entries = [{"Firmenname": "Mustermann GmbH", "Adresse": "Hauptstraße 1", "PLZ": "4810", "Ort": "Gmunden", "Ansprechperson": "Maria Muster", "E-Mail": "maria.muster@beispiel.at", "Telefon": "+43 7612 12345", "Handy": "", "Lehrberufe": "", "Fachbereich": "", "Anmerkungen": "Beispielzeile – bitte überschreiben oder löschen"}, {"Firmenname": "Heissl Installationstechnik GmbH", "Adresse": "Ebenzweierstr. 5", "PLZ": "4813", "Ort": "Altmünster", "Ansprechperson": "Sarah Mittendorfer", "E-Mail": "sarah.mittendorfer@heissl.at", "Telefon": "+43 7612 88025 612", "Handy": "", "Lehrberufe": "Elektrotechnik", "Fachbereich": "E", "Anmerkungen": ""}, {"Firmenname": "Heissl Installationstechnik GmbH", "Adresse": "Ebenzweierstr. 6", "PLZ": "4814", "Ort": "Altmünster", "Ansprechperson": "Sarah Mittendorfer", "E-Mail": "sarah.mittendorfer@heissl.at", "Telefon": "+43 7612 88025 613", "Handy": "", "Lehrberufe": "Installations- und Gebäudetechnik", "Fachbereich": "M", "Anmerkungen": ""}];
+const fields = {ort:"Ort", beruf:"Lehrberufe", gruppe:"Fachbereich"};
+function runSearch() {
+ const chosen = Object.fromEntries(Object.keys(fields).map(id=>[id,document.getElementById(id).value]));
+ const found = entries.filter(r=>Object.keys(fields).every(id=>!chosen[id] || (r[fields[id]]||"")===chosen[id]));
+ document.getElementById("count").textContent = found.length + (found.length===1 ? " Lehrbetrieb gefunden" : " Lehrbetriebe gefunden");
+ const target=document.getElementById("results");
+ if(!found.length) { target.innerHTML='<p>Keine passenden Lehrbetriebe gefunden. Bitte ändern Sie die Auswahl.</p>'; return; }
+ target.innerHTML=found.map(r=>`<article class="result">
+ <h3>${esc(r["Firmenname"])}</h3>
+ <p>${esc(r["Adresse"])}${r["Adresse"]&&r["PLZ"]?", ":""}${esc(r["PLZ"])} ${esc(r["Ort"])}</p>
+ <p><strong>Lehrberuf:</strong> ${esc(r["Lehrberufe"]||"Keine Angabe")}</p>
+ <p><strong>Fachgruppe:</strong> ${esc(r["Fachbereich"]||"Keine Angabe")}</p>
+ ${r["Ansprechperson"]?`<p><strong>Ansprechperson:</strong> ${esc(r["Ansprechperson"])}</p>`:""}
+ ${r["E-Mail"]?`<p><strong>E-Mail:</strong> <a href="mailto:${escAttr(r["E-Mail"])}">${esc(r["E-Mail"])}</a></p>`:""}
+ ${r["Telefon"]?`<p><strong>Telefon:</strong> ${esc(r["Telefon"])}</p>`:""}
+ </article>`).join("");
+}
+function esc(v) { return String(v||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function escAttr(v) { return esc(v); }
+document.getElementById("search").addEventListener("click",runSearch);
+document.getElementById("reset").addEventListener("click",()=>{Object.keys(fields).forEach(id=>document.getElementById(id).value="");runSearch();});
+Object.keys(fields).forEach(id=>document.getElementById(id).addEventListener("change",runSearch));
+runSearch();
+</script>
+</body>
+</html>
